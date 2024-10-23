@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -8,8 +9,14 @@ using UnityEngine.UI;
 public class UI_Main : MonoBehaviour
 {
     [SerializeField] InputField Input_Address;
+    [SerializeField] InputField Input_Length;
+    [SerializeField] InputField Input_Interval;
     [SerializeField] Button Btn_Read;
     [SerializeField] Text Text_Test;
+
+
+    private float subtitleLength;
+    private float subtitleInterval;
 
     private List<string> contentList = new List<string>();
 
@@ -25,9 +32,17 @@ public class UI_Main : MonoBehaviour
     }
 
 
+    private float textParser(string text, float defaultReturn = 3f)
+    {
+        return float.TryParse(text, out float parsedText) ? parsedText : defaultReturn;
+    }
+
+
     void ReadFile()
     {
         string filePath = Input_Address.text;
+        subtitleLength = textParser(Input_Length.text, 3f);
+        subtitleInterval = textParser(Input_Interval.text, 0f);
 
         if (File.Exists(filePath))
         {
@@ -62,24 +77,31 @@ public class UI_Main : MonoBehaviour
     private string MakeSRT(List<string> contentList)
     {
         string newContent = string.Empty;
-        int sec = 0;
-        int min = 0;
-        int hour = 0;
+        
+        TimeSpan time = TimeSpan.Zero;
+        TimeSpan interval = TimeSpan.FromSeconds(subtitleInterval);
+        TimeSpan length = TimeSpan.FromSeconds(subtitleLength);
+
         for(int i = 0; i < contentList.Count; i++)
         {
-            string index = (i+1).ToString();
-            string timeLine = $"{hour:D2}:{min:D2}:{sec:D2},000 --> {hour:D2}:{min:D2}:{sec+1:D2},000";
+            //자막 간격 계산
+            time = time.Add(interval);
+            string startTime = $"{time.Hours:D2}:{time.Minutes:D2}:{time.Seconds:D2},{time.Milliseconds:D3}";
+
+            //자막 길이 계산
+            time = time.Add(length);
+            string endTime = $"{time.Hours:D2}:{time.Minutes:D2}:{time.Seconds:D2},{time.Milliseconds:D3}";
+
+            string index = (i + 1).ToString();
+
+            string timeLine = $"{startTime} --> {endTime}";
+            
             string content = contentList[i];
 
             newContent += index + "\n";
             newContent += timeLine + "\n";
             newContent += content + "\n";
             newContent += "\n";
-
-            sec++;
-            if(sec == 59) { min++; sec = 0; }
-            if(min == 60) { hour++; min = 0; }
-            if(hour > 99) { Debug.LogError("?이럴리가 없는데"); break; }
         }
         return newContent;
     }
